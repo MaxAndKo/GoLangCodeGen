@@ -10,6 +10,10 @@ import (
 	"strings"
 )
 
+const (
+	httpServe = "func (h *%s) ServeHTTP(w http.ResponseWriter, r *http.Request) {\n"
+)
+
 type Enum struct {
 	Values  []string
 	Default string
@@ -49,14 +53,34 @@ type FileData struct {
 
 func main() {
 	data := extractData()
-
+	mapData := groupByStructLink(data)
 	res, err := os.Create(os.Args[2])
 	if err != nil {
 		panic(err)
 	}
 
 	fmt.Fprintln(res, "package "+data.PackageName)
+	for k := range mapData {
+		fmt.Fprintf(res, httpServe, k)
+		fmt.Fprintln(res, "}")
+	}
+
 	fmt.Println(data.FuncData)
+}
+
+func groupByStructLink(data FileData) map[string][]FuncData {
+	mapData := make(map[string][]FuncData)
+	for _, datum := range data.FuncData {
+		name := datum.Recv.Type.(*ast.StarExpr).X.(*ast.Ident).Name
+		funcData, ext := mapData[name]
+		if !ext {
+			funcData = []FuncData{datum}
+			mapData[name] = funcData
+		} else {
+			mapData[name] = append(funcData, datum)
+		}
+	}
+	return mapData
 }
 
 func extractData() FileData {
