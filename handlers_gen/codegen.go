@@ -60,9 +60,25 @@ func main() {
 	}
 
 	fmt.Fprintln(res, "package "+data.PackageName)
-	for k := range mapData {
+	fmt.Fprintln(res, "\nimport (\n\"net/http\"\n\"encoding/json\"\n)\n")
+	for k, v := range mapData {
 		fmt.Fprintf(res, httpServe, k)
-		fmt.Fprintln(res, "}")
+		fmt.Fprintln(res, "\tswitch r.URL.Path {")
+		for _, funcData := range v {
+			fmt.Fprintf(res, "\t\tcase \"%s\":\n", funcData.Api.Url)
+			fmt.Fprintf(res, "\t\t\tconverted := convertFor%s(r.URL.RawQuery)\n", funcData.MethodName) //TODo пока только для GET метода
+			fmt.Fprintf(res, "\t\t\tres, _ := h.%s(nil, converted)\n", funcData.MethodName)
+			fmt.Fprintf(res, "\t\t\tjsonRes, _ := json.Marshal(res)\n")
+			fmt.Fprintf(res, "\t\t\tw.Write(jsonRes)\n")
+		}
+		fmt.Fprintln(res, "\t}")
+		fmt.Fprintln(res, "}\n")
+
+		for _, funcData := range v {
+			fmt.Fprintf(res, "func convertFor%s(params string) %s {\n", funcData.MethodName, funcData.Params[1].Type.(*ast.Ident).Name)
+
+			fmt.Fprintln(res, "}\n")
+		}
 	}
 
 	fmt.Println(data.FuncData)
