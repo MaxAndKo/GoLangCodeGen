@@ -64,13 +64,14 @@ func main() {
 	}
 
 	fmt.Fprintln(res, "package "+data.PackageName)
-	fmt.Fprintln(res, "\nimport (\n\"net/http\"\n\"encoding/json\"\n\"strings\"\n\"strconv\"\n)\n")
+	fmt.Fprintln(res, "\nimport (\n\"net/http\"\n\"encoding/json\"\n\"strings\"\n\"strconv\"\n\"errors\"\n)\n")
 	for k, v := range mapData {
 		fmt.Fprintf(res, httpServe, k)
 		fmt.Fprintln(res, "\tswitch r.URL.Path {")
 		for _, funcData := range v {
 			fmt.Fprintf(res, "\t\tcase \"%s\":\n", funcData.Api.Url)
-			fmt.Fprintf(res, "\t\t\tconverted := convertFor%s%s(r.URL.RawQuery)\n", k, funcData.MethodName) //TODo пока только для GET метода
+			fmt.Fprintf(res, "\t\t\tconverted, error := convertFor%s%s(r.URL.RawQuery)\n", k, funcData.MethodName) //TODo пока только для GET метода
+			fmt.Fprintf(res, "\t\t\tif error != nil {\n\t\t\t\tw.Write([]byte(\"\\\"error\\\":\" + error.Error()))\n\t\t\t}\n")
 			fmt.Fprintf(res, "\t\t\tres, _ := h.%s(nil, converted)\n", funcData.MethodName)
 			fmt.Fprintf(res, "\t\t\tjsonRes, _ := json.Marshal(res)\n")
 			fmt.Fprintf(res, "\t\t\tw.Write(jsonRes)\n")
@@ -80,12 +81,12 @@ func main() {
 
 		for _, funcData := range v {
 			convertableType := funcData.Params[1].Type.(*ast.Ident)
-			fmt.Fprintf(res, "func convertFor%s%s(params string) %s {\n", k, funcData.MethodName, convertableType.Name)
+			fmt.Fprintf(res, "func convertFor%s%s(params string) (%s, error) {\n", k, funcData.MethodName, convertableType.Name)
 			fields := convertableType.Obj.Decl.(*ast.TypeSpec).Type.(*ast.StructType).Fields.List
 			for _, field := range fields {
 				isInt := field.Type.(*ast.Ident).Name == "int"
 				args := parseValidatorArgs(field.Tag)
-				targetName := field.Names[0].Name
+				targetName := strings.ToLower(field.Names[0].Name)
 				if args.ParamName != "" {
 					targetName = args.ParamName
 				}
@@ -105,7 +106,8 @@ func main() {
 					if isInt {
 						requiredFieldName = stringFieldName
 					}
-					fmt.Fprintf(res, "\tif %s == \"\" \t{\n\t\tpanic(\"\")\n\t}\n", requiredFieldName)
+					fmt.Fprintf(res, "\tif %s == \"\" {\n\t\treturn %s{}, errors.New(\"%s must me not empty\")\n\t}\n", requiredFieldName, convertableType.Name, requiredFieldName)
+
 				}
 
 				requiredFieldName := fieldName
@@ -121,17 +123,17 @@ func main() {
 
 				if args.HasMax {
 					if isInt {
-						fmt.Fprintf(res, "\t\tif %s > %d{\n\t\t\tpanic(\"\")\n\t\t\t}\n", fieldName, args.Max)
+						fmt.Fprintf(res, "\t\tif %s >= %d{\n\t\t\tpanic(\"\")\n\t\t\t}\n", fieldName, args.Max)
 					} else {
-						fmt.Fprintf(res, "\t\tif len(%s) > %d{\n\t\t\tpanic(\"\")\n\t\t}\n", fieldName, args.Max)
+						fmt.Fprintf(res, "\t\tif len(%s) >= %d{\n\t\t\tpanic(\"\")\n\t\t}\n", fieldName, args.Max)
 					}
 				}
 
 				if args.HasMin {
 					if isInt {
-						fmt.Fprintf(res, "\t\tif %s < %d{\n\t\t\tpanic(\"\")\n\t\t\t}\n", fieldName, args.Min)
+						fmt.Fprintf(res, "\t\tif %s <= %d{\n\t\t\tpanic(\"\")\n\t\t\t}\n", fieldName, args.Min)
 					} else {
-						fmt.Fprintf(res, "\t\tif len(%s) < %d{\n\t\t\tpanic(\"\")\n\t\t}\n", fieldName, args.Min)
+						fmt.Fprintf(res, "\t\tif len(%s) <= %d{\n\t\t\tpanic(\"\")\n\t\t}\n", fieldName, args.Min)
 					}
 				}
 
@@ -159,7 +161,7 @@ func main() {
 				value := "field" + field.Names[0].Name
 				fmt.Fprintf(res, "\t\t%s:%s,\n", field.Names[0].Name, value)
 			}
-			fmt.Fprintln(res, "\t}\n")
+			fmt.Fprintln(res, "\t}, nil\n")
 
 			fmt.Fprintln(res, "}\n")
 		}
