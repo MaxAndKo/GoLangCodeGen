@@ -41,7 +41,7 @@ func TestMyApi(t *testing.T) {
 	ts := httptest.NewServer(NewMyApi())
 
 	cases := []Case{
-		{ // успешный запрос
+		/*{ // успешный запрос
 			Path:   ApiUserProfile,
 			Query:  "login=rvasily",
 			Status: http.StatusOK,
@@ -54,8 +54,8 @@ func TestMyApi(t *testing.T) {
 					"status":    20,
 				},
 			},
-		},
-		/*{ // успешный запрос - POST
+		},*/
+		{ // успешный запрос - POST
 			Path:   ApiUserProfile,
 			Method: http.MethodPost,
 			Query:  "login=rvasily",
@@ -70,7 +70,7 @@ func TestMyApi(t *testing.T) {
 				},
 			},
 		},
-		{ // сработала валидация - логин не должен быть пустым
+		/*{ // сработала валидация - логин не должен быть пустым
 			Path:   ApiUserProfile,
 			Query:  "",
 			Status: http.StatusBadRequest,
