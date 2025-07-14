@@ -65,6 +65,14 @@ func putRes(res interface{}) []byte {
 	return jsonRes
 }
 `
+	processPostBody = `			var params string
+			if r.Method == http.MethodPost {
+				all, _ := io.ReadAll(r.Body)
+				params = string(all)
+			} else {
+				params = r.URL.RawQuery
+			}
+`
 )
 
 func main() {
@@ -82,7 +90,8 @@ func main() {
 		fmt.Fprintln(res, "\tswitch r.URL.Path {")
 		for _, funcData := range v {
 			fmt.Fprintf(res, "\t\tcase \"%s\":\n", funcData.Api.Url)
-			fmt.Fprintf(res, "\t\t\tconverted, error := convertFor%s%s(r.URL.RawQuery)\n", k, funcData.MethodName) //TODo пока только для GET метода
+			fmt.Fprintf(res, processPostBody)
+			fmt.Fprintf(res, "\t\t\tconverted, error := convertFor%s%s(params)\n", k, funcData.MethodName)
 			fmt.Fprintf(res, "\t\t\tif error != nil {\n\t\t\t\tw.Write([]byte(\"\\\"error\\\":\" + error.Error()))\n\t\t\t\treturn\n\t\t\t}\n")
 			fmt.Fprintf(res, "\t\t\tres, error := h.%s(nil, converted)\n", funcData.MethodName)
 			fmt.Fprintf(res, "\t\t\tif error != nil {\n\t\t\t\tw.Write([]byte(\"\\\"error\\\":\" + error.Error()))\n\t\t\t\treturn\n\t\t\t}\n")
