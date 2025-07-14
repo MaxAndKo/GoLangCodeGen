@@ -55,6 +55,18 @@ type FileData struct {
 	PackageName string
 }
 
+var (
+	putRes = `
+func putRes(res interface{}) []byte {
+	jsonRes, _ := json.Marshal(map[string]interface{}{
+		"error":    "",
+		"response": res,
+	})
+	return jsonRes
+}
+`
+)
+
 func main() {
 	data := extractData()
 	mapData := groupByStructLink(data)
@@ -64,7 +76,7 @@ func main() {
 	}
 
 	fmt.Fprintln(res, "package "+data.PackageName)
-	fmt.Fprintln(res, "\nimport (\n\"net/http\"\n\"encoding/json\"\n\"strings\"\n\"strconv\"\n\"errors\"\n)\n")
+	fmt.Fprintln(res, "\nimport (\n\"net/http\"\n\"encoding/json\"\n\"strings\"\n\"strconv\"\n\"errors\"\n\"slices\"\n)\n")
 	for k, v := range mapData {
 		fmt.Fprintf(res, httpServe, k)
 		fmt.Fprintln(res, "\tswitch r.URL.Path {")
@@ -72,9 +84,9 @@ func main() {
 			fmt.Fprintf(res, "\t\tcase \"%s\":\n", funcData.Api.Url)
 			fmt.Fprintf(res, "\t\t\tconverted, error := convertFor%s%s(r.URL.RawQuery)\n", k, funcData.MethodName) //TODo пока только для GET метода
 			fmt.Fprintf(res, "\t\t\tif error != nil {\n\t\t\t\tw.Write([]byte(\"\\\"error\\\":\" + error.Error()))\n\t\t\t}\n")
-			fmt.Fprintf(res, "\t\t\tres, _ := h.%s(nil, converted)\n", funcData.MethodName)
-			fmt.Fprintf(res, "\t\t\tjsonRes, _ := json.Marshal(res)\n")
-			fmt.Fprintf(res, "\t\t\tw.Write(jsonRes)\n")
+			fmt.Fprintf(res, "\t\t\tres, error := h.%s(nil, converted)\n", funcData.MethodName)
+			fmt.Fprintf(res, "\t\t\tif error != nil {\n\t\t\t\tw.Write([]byte(\"\\\"error\\\":\" + error.Error()))\n\t\t\t}\n")
+			fmt.Fprintf(res, "\t\t\tw.Write(putRes(res))\n")
 		}
 		fmt.Fprintln(res, "\t}")
 		fmt.Fprintln(res, "}\n")
@@ -166,7 +178,8 @@ func main() {
 			fmt.Fprintln(res, "}\n")
 		}
 	}
-	fmt.Fprintln(res, "func getStringValue(value string, name string) string {\n\tparamnameIndex := strings.Index(value, name)\n\tif paramnameIndex != -1 {\n\t\tcuttedStart := value[paramnameIndex+len(name):]\n\t\tfirstAmpersand := strings.Index(cuttedStart, \"&\")\n\t\tif firstAmpersand == -1 {\n\t\t\treturn cuttedStart\n\t\t}\n\t\treturn cuttedStart[:firstAmpersand]\n\t} else {\n\t\treturn \"\"\n\t}\n}")
+	fmt.Fprintln(res, "func getStringValue(value string, name string) string {\n\tparamnameIndex := strings.Index(value, name)\n\tif paramnameIndex != -1 {\n\t\tcuttedStart := value[paramnameIndex+len(name) + 1:]\n\t\tfirstAmpersand := strings.Index(cuttedStart, \"&\")\n\t\tif firstAmpersand == -1 {\n\t\t\treturn cuttedStart\n\t\t}\n\t\treturn cuttedStart[:firstAmpersand]\n\t} else {\n\t\treturn \"\"\n\t}\n}")
+	fmt.Fprintf(res, putRes)
 
 	fmt.Println(data.FuncData)
 }
