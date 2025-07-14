@@ -64,7 +64,7 @@ func main() {
 	}
 
 	fmt.Fprintln(res, "package "+data.PackageName)
-	fmt.Fprintln(res, "\nimport (\n\"net/http\"\n\"encoding/json\"\n\"strings\"\n)\n")
+	fmt.Fprintln(res, "\nimport (\n\"net/http\"\n\"encoding/json\"\n\"strings\"\n\"strconv\"\n)\n")
 	for k, v := range mapData {
 		fmt.Fprintf(res, httpServe, k)
 		fmt.Fprintln(res, "\tswitch r.URL.Path {")
@@ -81,16 +81,86 @@ func main() {
 		for _, funcData := range v {
 			convertableType := funcData.Params[1].Type.(*ast.Ident)
 			fmt.Fprintf(res, "func convertFor%s%s(params string) %s {\n", k, funcData.MethodName, convertableType.Name)
-			for _, field := range convertableType.Obj.Decl.(*ast.TypeSpec).Type.(*ast.StructType).Fields.List {
+			fields := convertableType.Obj.Decl.(*ast.TypeSpec).Type.(*ast.StructType).Fields.List
+			for _, field := range fields {
+				isInt := field.Type.(*ast.Ident).Name == "int"
 				args := parseValidatorArgs(field.Tag)
 				targetName := field.Names[0].Name
 				if args.ParamName != "" {
 					targetName = args.ParamName
 				}
 
-				fmt.Fprintf(res, "stringField%s := ", field.Names[0].Name)
+				fieldName := "field" + field.Names[0].Name
+				stringFieldName := "stringField" + field.Names[0].Name
+				if isInt {
+					fmt.Fprintf(res, "\tvar %s int\n", fieldName)
+					fmt.Fprintf(res, "\t%s := ", stringFieldName)
+				} else {
+					fmt.Fprintf(res, "\t%s := ", fieldName)
+				}
 				fmt.Fprintf(res, "getStringValue(params, \"%s\")\n", targetName)
+
+				if args.Required {
+					requiredFieldName := fieldName
+					if isInt {
+						requiredFieldName = stringFieldName
+					}
+					fmt.Fprintf(res, "\tif %s == \"\" \t{\n\t\tpanic(\"\")\n\t}\n", requiredFieldName)
+				}
+
+				requiredFieldName := fieldName
+				if isInt {
+					requiredFieldName = stringFieldName
+				}
+				if args.HasMin || args.HasMax {
+					fmt.Fprintf(res, "\tif %s != \"\"{\n", requiredFieldName)
+				}
+				if isInt {
+					fmt.Fprintf(res, "\t\t%s, _ = strconv.Atoi(%s)\n", fieldName, stringFieldName)
+				}
+
+				if args.HasMax {
+					if isInt {
+						fmt.Fprintf(res, "\t\tif %s > %d{\n\t\t\tpanic(\"\")\n\t\t\t}\n", fieldName, args.Max)
+					} else {
+						fmt.Fprintf(res, "\t\tif len(%s) > %d{\n\t\t\tpanic(\"\")\n\t\t}\n", fieldName, args.Max)
+					}
+				}
+
+				if args.HasMin {
+					if isInt {
+						fmt.Fprintf(res, "\t\tif %s < %d{\n\t\t\tpanic(\"\")\n\t\t\t}\n", fieldName, args.Min)
+					} else {
+						fmt.Fprintf(res, "\t\tif len(%s) < %d{\n\t\t\tpanic(\"\")\n\t\t}\n", fieldName, args.Min)
+					}
+				}
+
+				if args.HasMin || args.HasMax {
+					fmt.Fprintf(res, "\t}\n")
+				}
+
+				if args.HasEnum {
+					if isInt {
+						panic("Can't be int")
+					}
+					fmt.Fprintf(res, "\tif %s == \"\"{\n", fieldName)
+					fmt.Fprintf(res, "\t\t%s = \"%s\"\n", fieldName, args.Enum.Default)
+					fmt.Fprintf(res, "\t} else {\n")
+					fmt.Fprintf(res, "\t\tif !slices.Contains([]string{\"%s\"}, %s){\n", strings.Join(args.Enum.Values, "\",\""), fieldName)
+					fmt.Fprintf(res, "\t\t\tpanic(\"\")\n")
+					fmt.Fprintf(res, "\t\t}\n")
+					fmt.Fprintf(res, "\t}\n")
+				}
+
 			}
+			fmt.Fprintf(res, "\treturn %s{\n", convertableType.Name)
+
+			for _, field := range fields {
+				value := "field" + field.Names[0].Name
+				fmt.Fprintf(res, "\t\t%s:%s,\n", field.Names[0].Name, value)
+			}
+			fmt.Fprintln(res, "\t}\n")
+
 			fmt.Fprintln(res, "}\n")
 		}
 	}
@@ -123,7 +193,7 @@ func parseValidatorArgs(stringArgs *ast.BasicLit) ValidatorArgs {
 	defaultString := getValueFromString(value, "default")
 	if enumString != "" {
 		args.Enum = Enum{
-			Values:  strings.Split(enumString, ","),
+			Values:  strings.Split(enumString, "|"),
 			Default: defaultString,
 		}
 		args.HasEnum = true
@@ -135,10 +205,10 @@ func parseValidatorArgs(stringArgs *ast.BasicLit) ValidatorArgs {
 func getValueFromString(value string, name string) string {
 	paramnameIndex := strings.Index(value, name)
 	if paramnameIndex != -1 {
-		cuttedStart := value[paramnameIndex+len(name):]
+		cuttedStart := value[paramnameIndex+len(name)+1:]
 		firstDoubleQuote := strings.Index(cuttedStart, "\"")
 		firstComma := strings.Index(cuttedStart, ",")
-		if firstComma == -1 || firstComma < firstDoubleQuote {
+		if firstComma == -1 || firstComma > firstDoubleQuote {
 			return cuttedStart[:firstDoubleQuote]
 		}
 		return cuttedStart[:firstComma]
