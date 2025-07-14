@@ -7,6 +7,7 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -28,8 +29,11 @@ type ValidatorArgs struct {
 	Required  bool
 	ParamName string
 	Enum      Enum
-	min       int
-	max       int
+	HasEnum   bool
+	Min       int
+	HasMin    bool
+	Max       int
+	HasMax    bool
 }
 
 type Api struct {
@@ -60,13 +64,13 @@ func main() {
 	}
 
 	fmt.Fprintln(res, "package "+data.PackageName)
-	fmt.Fprintln(res, "\nimport (\n\"net/http\"\n\"encoding/json\"\n)\n")
+	fmt.Fprintln(res, "\nimport (\n\"net/http\"\n\"encoding/json\"\n\"strings\"\n)\n")
 	for k, v := range mapData {
 		fmt.Fprintf(res, httpServe, k)
 		fmt.Fprintln(res, "\tswitch r.URL.Path {")
 		for _, funcData := range v {
 			fmt.Fprintf(res, "\t\tcase \"%s\":\n", funcData.Api.Url)
-			fmt.Fprintf(res, "\t\t\tconverted := convertFor%s(r.URL.RawQuery)\n", funcData.MethodName) //TODo пока только для GET метода
+			fmt.Fprintf(res, "\t\t\tconverted := convertFor%s%s(r.URL.RawQuery)\n", k, funcData.MethodName) //TODo пока только для GET метода
 			fmt.Fprintf(res, "\t\t\tres, _ := h.%s(nil, converted)\n", funcData.MethodName)
 			fmt.Fprintf(res, "\t\t\tjsonRes, _ := json.Marshal(res)\n")
 			fmt.Fprintf(res, "\t\t\tw.Write(jsonRes)\n")
@@ -75,13 +79,72 @@ func main() {
 		fmt.Fprintln(res, "}\n")
 
 		for _, funcData := range v {
-			fmt.Fprintf(res, "func convertFor%s(params string) %s {\n", funcData.MethodName, funcData.Params[1].Type.(*ast.Ident).Name)
+			convertableType := funcData.Params[1].Type.(*ast.Ident)
+			fmt.Fprintf(res, "func convertFor%s%s(params string) %s {\n", k, funcData.MethodName, convertableType.Name)
+			for _, field := range convertableType.Obj.Decl.(*ast.TypeSpec).Type.(*ast.StructType).Fields.List {
+				args := parseValidatorArgs(field.Tag)
+				targetName := field.Names[0].Name
+				if args.ParamName != "" {
+					targetName = args.ParamName
+				}
 
+				fmt.Fprintf(res, "stringField%s := ", field.Names[0].Name)
+				fmt.Fprintf(res, "getStringValue(params, \"%s\")\n", targetName)
+			}
 			fmt.Fprintln(res, "}\n")
 		}
 	}
+	fmt.Fprintln(res, "func getStringValue(value string, name string) string {\n\tparamnameIndex := strings.Index(value, name)\n\tif paramnameIndex != -1 {\n\t\tcuttedStart := value[paramnameIndex+len(name):]\n\t\tfirstAmpersand := strings.Index(cuttedStart, \"&\")\n\t\tif firstAmpersand == -1 {\n\t\t\treturn cuttedStart\n\t\t}\n\t\treturn cuttedStart[:firstAmpersand]\n\t} else {\n\t\treturn \"\"\n\t}\n}")
 
 	fmt.Println(data.FuncData)
+}
+
+// TODO обработать ситуацию, когда нет никаких tag
+func parseValidatorArgs(stringArgs *ast.BasicLit) ValidatorArgs {
+	value := stringArgs.Value
+	args := ValidatorArgs{}
+	if strings.Contains(value, "required") {
+		args.Required = true
+	}
+
+	args.ParamName = getValueFromString(value, "paramname")
+	minString := getValueFromString(value, "min")
+	if minString != "" {
+		args.Min, _ = strconv.Atoi(minString)
+		args.HasMin = true
+	}
+	maxString := getValueFromString(value, "max")
+	if maxString != "" {
+		args.Max, _ = strconv.Atoi(maxString)
+		args.HasMax = true
+	}
+
+	enumString := getValueFromString(value, "enum")
+	defaultString := getValueFromString(value, "default")
+	if enumString != "" {
+		args.Enum = Enum{
+			Values:  strings.Split(enumString, ","),
+			Default: defaultString,
+		}
+		args.HasEnum = true
+	}
+
+	return args
+}
+
+func getValueFromString(value string, name string) string {
+	paramnameIndex := strings.Index(value, name)
+	if paramnameIndex != -1 {
+		cuttedStart := value[paramnameIndex+len(name):]
+		firstDoubleQuote := strings.Index(cuttedStart, "\"")
+		firstComma := strings.Index(cuttedStart, ",")
+		if firstComma == -1 || firstComma < firstDoubleQuote {
+			return cuttedStart[:firstDoubleQuote]
+		}
+		return cuttedStart[:firstComma]
+	} else {
+		return ""
+	}
 }
 
 func groupByStructLink(data FileData) map[string][]FuncData {
