@@ -84,7 +84,7 @@ func main() {
 	}
 
 	fmt.Fprintln(res, "package "+data.PackageName)
-	fmt.Fprintln(res, "\nimport (\n\"net/http\"\n\"encoding/json\"\n\"strings\"\n\"strconv\"\n\"errors\"\n\"slices\"\n)\n")
+	fmt.Fprintln(res, "\nimport (\n\"net/http\"\n\"encoding/json\"\n\"strings\"\n\"strconv\"\n\"errors\"\n\"slices\"\n\"io\"\n)\n")
 	for k, v := range mapData {
 		fmt.Fprintf(res, httpServe, k)
 		fmt.Fprintln(res, "\tswitch r.URL.Path {")
@@ -92,9 +92,9 @@ func main() {
 			fmt.Fprintf(res, "\t\tcase \"%s\":\n", funcData.Api.Url)
 			fmt.Fprintf(res, processPostBody)
 			fmt.Fprintf(res, "\t\t\tconverted, error := convertFor%s%s(params)\n", k, funcData.MethodName)
-			fmt.Fprintf(res, "\t\t\tif error != nil {\n\t\t\t\tw.Write([]byte(\"\\\"error\\\":\" + error.Error()))\n\t\t\t\treturn\n\t\t\t}\n")
+			fmt.Fprintf(res, "\t\t\tif error != nil {\n\t\t\t\thttp.Error(w, \"{\\\"error\\\":\\\"\" + error.Error() + \"\\\"}\", http.StatusBadRequest)\n\t\t\t\treturn\n\t\t\t}\n")
 			fmt.Fprintf(res, "\t\t\tres, error := h.%s(nil, converted)\n", funcData.MethodName)
-			fmt.Fprintf(res, "\t\t\tif error != nil {\n\t\t\t\tw.Write([]byte(\"\\\"error\\\":\" + error.Error()))\n\t\t\t\treturn\n\t\t\t}\n")
+			fmt.Fprintf(res, "\t\t\tif error != nil {\n\t\t\t\thttp.Error(w, \"\\\"{error\\\":\" + error.Error() + \"}\", http.StatusBadRequest)\n\t\t\t\treturn\n\t\t\t}\n")
 			fmt.Fprintf(res, "\t\t\tw.Write(putRes(res))\n")
 		}
 		fmt.Fprintln(res, "\t}")
@@ -127,7 +127,7 @@ func main() {
 					if isInt {
 						requiredFieldName = stringFieldName
 					}
-					fmt.Fprintf(res, "\tif %s == \"\" {\n\t\treturn %s{}, errors.New(\"%s must me not empty\")\n\t}\n", requiredFieldName, convertableType.Name, requiredFieldName)
+					fmt.Fprintf(res, "\tif %s == \"\" {\n\t\treturn %s{}, errors.New(\"%s must me not empty\")\n\t}\n", requiredFieldName, convertableType.Name, targetName)
 
 				}
 

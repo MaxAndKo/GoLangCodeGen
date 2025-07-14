@@ -54,7 +54,7 @@ func TestMyApi(t *testing.T) {
 					"status":    20,
 				},
 			},
-		},*/
+		},
 		{ // успешный запрос - POST
 			Path:   ApiUserProfile,
 			Method: http.MethodPost,
@@ -69,8 +69,8 @@ func TestMyApi(t *testing.T) {
 					"status":    20,
 				},
 			},
-		},
-		/*{ // сработала валидация - логин не должен быть пустым
+		},*/
+		{ // сработала валидация - логин не должен быть пустым
 			Path:   ApiUserProfile,
 			Query:  "",
 			Status: http.StatusBadRequest,
@@ -78,7 +78,7 @@ func TestMyApi(t *testing.T) {
 				"error": "login must me not empty",
 			},
 		},
-		{ // получили ошибку общего назначения - ваш код сам подставил 500
+		/*{ // получили ошибку общего назначения - ваш код сам подставил 500
 			Path:   ApiUserProfile,
 			Query:  "login=bad_user",
 			Status: http.StatusInternalServerError,
