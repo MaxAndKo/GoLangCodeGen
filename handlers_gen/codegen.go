@@ -73,6 +73,20 @@ func putRes(res interface{}) []byte {
 				params = r.URL.RawQuery
 			}
 `
+	ifValidationError = `			if error != nil {
+				http.Error(w, "{\"error\":\"" + error.Error() + "\"}", http.StatusBadRequest)
+				return
+			}
+`
+	ifProcessError = `			if error != nil {
+				if error.Error() == "user not exist" {
+					http.Error(w, "{\"error\":\""+error.Error()+"\"}", http.StatusNotFound)
+					return
+				}
+				http.Error(w, "{\"error\":\""+error.Error()+"\"}", http.StatusInternalServerError)
+				return
+			}
+`
 )
 
 func main() {
@@ -92,9 +106,9 @@ func main() {
 			fmt.Fprintf(res, "\t\tcase \"%s\":\n", funcData.Api.Url)
 			fmt.Fprintf(res, processPostBody)
 			fmt.Fprintf(res, "\t\t\tconverted, error := convertFor%s%s(params)\n", k, funcData.MethodName)
-			fmt.Fprintf(res, "\t\t\tif error != nil {\n\t\t\t\thttp.Error(w, \"{\\\"error\\\":\\\"\" + error.Error() + \"\\\"}\", http.StatusBadRequest)\n\t\t\t\treturn\n\t\t\t}\n")
+			fmt.Fprintf(res, ifValidationError)
 			fmt.Fprintf(res, "\t\t\tres, error := h.%s(nil, converted)\n", funcData.MethodName)
-			fmt.Fprintf(res, "\t\t\tif error != nil {\n\t\t\t\thttp.Error(w, \"{\\\"error\\\":\\\"\" + error.Error() + \"\\\"}\", http.StatusInternalServerError)\n\t\t\t\treturn\n\t\t\t}\n")
+			fmt.Fprintf(res, ifProcessError)
 			fmt.Fprintf(res, "\t\t\tw.Write(putRes(res))\n")
 		}
 		fmt.Fprintln(res, "\t}")

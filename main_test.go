@@ -77,7 +77,7 @@ func TestMyApi(t *testing.T) {
 			Result: CR{
 				"error": "login must me not empty",
 			},
-		},*/
+		},
 		{ // получили ошибку общего назначения - ваш код сам подставил 500
 			Path:   ApiUserProfile,
 			Query:  "login=bad_user",
@@ -85,8 +85,8 @@ func TestMyApi(t *testing.T) {
 			Result: CR{
 				"error": "bad user",
 			},
-		},
-		/*{ // получили специализированную ошибку - ваш код поставил статус 404 оттуда
+		},*/
+		{ // получили специализированную ошибку - ваш код поставил статус 404 оттуда
 			Path:   ApiUserProfile,
 			Query:  "login=not_exist_user",
 			Status: http.StatusNotFound,
@@ -95,7 +95,7 @@ func TestMyApi(t *testing.T) {
 			},
 		},
 		// ------
-		{ // это должен ответить ваш ServeHTTP - если ему пришло что-то неизвестное (например когда он обрабатывает /user/)
+		/*{ // это должен ответить ваш ServeHTTP - если ему пришло что-то неизвестное (например когда он обрабатывает /user/)
 			Path:   "/user/unknown",
 			Query:  "login=not_exist_user",
 			Status: http.StatusNotFound,
