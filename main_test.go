@@ -41,7 +41,7 @@ func TestMyApi(t *testing.T) {
 	ts := httptest.NewServer(NewMyApi())
 
 	cases := []Case{
-		/*{ // успешный запрос
+		{ // успешный запрос
 			Path:   ApiUserProfile,
 			Query:  "login=rvasily",
 			Status: http.StatusOK,
@@ -130,7 +130,7 @@ func TestMyApi(t *testing.T) {
 					"status":    10,
 				},
 			},
-		},*/
+		},
 
 		{ // только POST
 			Path:   ApiUserCreate,
@@ -142,7 +142,7 @@ func TestMyApi(t *testing.T) {
 				"error": "bad method",
 			},
 		},
-		/*{
+		{
 			Path:   ApiUserCreate,
 			Method: http.MethodPost,
 			Query:  "any_params=123",
@@ -162,7 +162,7 @@ func TestMyApi(t *testing.T) {
 				"error": "user mr.moderator exist",
 			},
 		},
-		{
+		/*{
 			Path:   ApiUserCreate,
 			Method: http.MethodPost,
 			Query:  "&age=32&status=moderator&full_name=Ivan_Ivanov",

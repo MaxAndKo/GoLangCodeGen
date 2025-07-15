@@ -89,10 +89,11 @@ func putRes(res interface{}) []byte {
 `
 	ifWrongUrl = `	http.Error(w, "{\"error\":\"unknown method\"}", http.StatusNotFound)
 `
-	ifWrongMethod = `		if r.Method != "%s" {
-		http.Error(w, "{\"error\":\"bad method\"}", http.StatusNotAcceptable)
-		return
-		}
+	ifApiError = `		apiError, ok := error.(ApiError)
+			if ok {
+				http.Error(w, "{\"error\":\""+apiError.Error()+"\"}", apiError.HTTPStatus)
+				return
+			}
 `
 )
 
@@ -114,10 +115,14 @@ func main() {
 			if funcData.Api.Method != "" {
 				fmt.Fprintf(res, "\t\tif r.Method != \"%s\" {\n\t\t\thttp.Error(w, \"{\\\"error\\\":\\\"bad method\\\"}\", http.StatusNotAcceptable)\n\t\t\treturn\n\t\t}\n", funcData.Api.Method)
 			}
+			if funcData.Api.Auth {
+				fmt.Fprintf(res, "\t\tauthToken := r.Header.Get(\"X-Auth\")\n\t\tif authToken == \"\" {\n\t\t\thttp.Error(w, \"{\\\"error\\\":\\\"unauthorized\\\"}\", http.StatusForbidden)\n\t\t\treturn\n\t\t}\n")
+			}
 			fmt.Fprintf(res, processPostBody)
 			fmt.Fprintf(res, "\t\tconverted, error := convertFor%s%s(params)\n", k, funcData.MethodName)
 			fmt.Fprintf(res, ifValidationError)
 			fmt.Fprintf(res, "\t\tres, error := h.%s(nil, converted)\n", funcData.MethodName)
+			fmt.Fprintf(res, ifApiError)
 			fmt.Fprintf(res, ifProcessError)
 			fmt.Fprintf(res, "\t\tw.Write(putRes(res))\n")
 			fmt.Fprintf(res, "\t\treturn\n")
