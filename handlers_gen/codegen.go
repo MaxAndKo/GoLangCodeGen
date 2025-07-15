@@ -87,7 +87,12 @@ func putRes(res interface{}) []byte {
 		return
 		}
 `
-	defaultUrlOrMethod = `	http.Error(w, "{\"error\":\"unknown method\"}", http.StatusNotFound)
+	ifWrongUrl = `	http.Error(w, "{\"error\":\"unknown method\"}", http.StatusNotFound)
+`
+	ifWrongMethod = `		if r.Method != "%s" {
+		http.Error(w, "{\"error\":\"bad method\"}", http.StatusNotAcceptable)
+		return
+		}
 `
 )
 
@@ -105,11 +110,10 @@ func main() {
 		fmt.Fprintf(res, httpServe, k)
 		fmt.Fprintln(res, "\turl := r.URL.Path")
 		for _, funcData := range v {
-			fmt.Fprintf(res, "\tif url == \"%s\"", funcData.Api.Url)
+			fmt.Fprintf(res, "\tif url == \"%s\"{\n", funcData.Api.Url)
 			if funcData.Api.Method != "" {
-				fmt.Fprintf(res, " && r.Method == \"%s\"", funcData.Api.Method)
+				fmt.Fprintf(res, "\t\tif r.Method != \"%s\" {\n\t\t\thttp.Error(w, \"{\\\"error\\\":\\\"bad method\\\"}\", http.StatusNotAcceptable)\n\t\t\treturn\n\t\t}\n", funcData.Api.Method)
 			}
-			fmt.Fprintf(res, "{\n")
 			fmt.Fprintf(res, processPostBody)
 			fmt.Fprintf(res, "\t\tconverted, error := convertFor%s%s(params)\n", k, funcData.MethodName)
 			fmt.Fprintf(res, ifValidationError)
@@ -119,7 +123,7 @@ func main() {
 			fmt.Fprintf(res, "\t\treturn\n")
 			fmt.Fprintf(res, "\t}\n")
 		}
-		fmt.Fprint(res, defaultUrlOrMethod)
+		fmt.Fprint(res, ifWrongUrl)
 		fmt.Fprintln(res, "}\n")
 
 		for _, funcData := range v {

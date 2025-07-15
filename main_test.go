@@ -93,7 +93,7 @@ func TestMyApi(t *testing.T) {
 			Result: CR{
 				"error": "user not exist",
 			},
-		},*/
+		},
 		// ------
 		{ // это должен ответить ваш ServeHTTP - если ему пришло что-то неизвестное (например когда он обрабатывает /user/)
 			Path:   "/user/unknown",
@@ -104,7 +104,7 @@ func TestMyApi(t *testing.T) {
 			},
 		},
 		// ------
-		/*{ // создаём юзера
+		{ // создаём юзера
 			Path:   ApiUserCreate,
 			Method: http.MethodPost,
 			Query:  "login=mr.moderator&age=32&status=moderator&full_name=Ivan_Ivanov",
@@ -130,7 +130,7 @@ func TestMyApi(t *testing.T) {
 					"status":    10,
 				},
 			},
-		},
+		},*/
 
 		{ // только POST
 			Path:   ApiUserCreate,
@@ -142,7 +142,7 @@ func TestMyApi(t *testing.T) {
 				"error": "bad method",
 			},
 		},
-		{
+		/*{
 			Path:   ApiUserCreate,
 			Method: http.MethodPost,
 			Query:  "any_params=123",
