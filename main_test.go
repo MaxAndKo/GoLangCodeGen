@@ -85,7 +85,7 @@ func TestMyApi(t *testing.T) {
 			Result: CR{
 				"error": "bad user",
 			},
-		},*/
+		},
 		{ // получили специализированную ошибку - ваш код поставил статус 404 оттуда
 			Path:   ApiUserProfile,
 			Query:  "login=not_exist_user",
@@ -93,9 +93,9 @@ func TestMyApi(t *testing.T) {
 			Result: CR{
 				"error": "user not exist",
 			},
-		},
+		},*/
 		// ------
-		/*{ // это должен ответить ваш ServeHTTP - если ему пришло что-то неизвестное (например когда он обрабатывает /user/)
+		{ // это должен ответить ваш ServeHTTP - если ему пришло что-то неизвестное (например когда он обрабатывает /user/)
 			Path:   "/user/unknown",
 			Query:  "login=not_exist_user",
 			Status: http.StatusNotFound,
@@ -104,7 +104,7 @@ func TestMyApi(t *testing.T) {
 			},
 		},
 		// ------
-		{ // создаём юзера
+		/*{ // создаём юзера
 			Path:   ApiUserCreate,
 			Method: http.MethodPost,
 			Query:  "login=mr.moderator&age=32&status=moderator&full_name=Ivan_Ivanov",

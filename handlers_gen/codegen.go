@@ -65,27 +65,29 @@ func putRes(res interface{}) []byte {
 	return jsonRes
 }
 `
-	processPostBody = `			var params string
-			if r.Method == http.MethodPost {
-				all, _ := io.ReadAll(r.Body)
-				params = string(all)
-			} else {
-				params = r.URL.RawQuery
-			}
+	processPostBody = `		var params string
+		if r.Method == http.MethodPost {
+			all, _ := io.ReadAll(r.Body)
+			params = string(all)
+		} else {
+			params = r.URL.RawQuery
+		}
 `
-	ifValidationError = `			if error != nil {
-				http.Error(w, "{\"error\":\"" + error.Error() + "\"}", http.StatusBadRequest)
-				return
-			}
+	ifValidationError = `		if error != nil {
+		http.Error(w, "{\"error\":\"" + error.Error() + "\"}", http.StatusBadRequest)
+		return
+		}
 `
-	ifProcessError = `			if error != nil {
-				if error.Error() == "user not exist" {
-					http.Error(w, "{\"error\":\""+error.Error()+"\"}", http.StatusNotFound)
-					return
-				}
-				http.Error(w, "{\"error\":\""+error.Error()+"\"}", http.StatusInternalServerError)
-				return
-			}
+	ifProcessError = `		if error != nil {
+		if error.Error() == "user not exist" {
+			http.Error(w, "{\"error\":\""+error.Error()+"\"}", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "{\"error\":\""+error.Error()+"\"}", http.StatusInternalServerError)
+		return
+		}
+`
+	defaultUrlOrMethod = `	http.Error(w, "{\"error\":\"unknown method\"}", http.StatusNotFound)
 `
 )
 
@@ -101,17 +103,23 @@ func main() {
 	fmt.Fprintln(res, "\nimport (\n\"net/http\"\n\"encoding/json\"\n\"strings\"\n\"strconv\"\n\"errors\"\n\"slices\"\n\"io\"\n)\n")
 	for k, v := range mapData {
 		fmt.Fprintf(res, httpServe, k)
-		fmt.Fprintln(res, "\tswitch r.URL.Path {")
+		fmt.Fprintln(res, "\turl := r.URL.Path")
 		for _, funcData := range v {
-			fmt.Fprintf(res, "\t\tcase \"%s\":\n", funcData.Api.Url)
+			fmt.Fprintf(res, "\tif url == \"%s\"", funcData.Api.Url)
+			if funcData.Api.Method != "" {
+				fmt.Fprintf(res, " && r.Method == \"%s\"", funcData.Api.Method)
+			}
+			fmt.Fprintf(res, "{\n")
 			fmt.Fprintf(res, processPostBody)
-			fmt.Fprintf(res, "\t\t\tconverted, error := convertFor%s%s(params)\n", k, funcData.MethodName)
+			fmt.Fprintf(res, "\t\tconverted, error := convertFor%s%s(params)\n", k, funcData.MethodName)
 			fmt.Fprintf(res, ifValidationError)
-			fmt.Fprintf(res, "\t\t\tres, error := h.%s(nil, converted)\n", funcData.MethodName)
+			fmt.Fprintf(res, "\t\tres, error := h.%s(nil, converted)\n", funcData.MethodName)
 			fmt.Fprintf(res, ifProcessError)
-			fmt.Fprintf(res, "\t\t\tw.Write(putRes(res))\n")
+			fmt.Fprintf(res, "\t\tw.Write(putRes(res))\n")
+			fmt.Fprintf(res, "\t\treturn\n")
+			fmt.Fprintf(res, "\t}\n")
 		}
-		fmt.Fprintln(res, "\t}")
+		fmt.Fprint(res, defaultUrlOrMethod)
 		fmt.Fprintln(res, "}\n")
 
 		for _, funcData := range v {
