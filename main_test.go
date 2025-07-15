@@ -69,7 +69,7 @@ func TestMyApi(t *testing.T) {
 					"status":    20,
 				},
 			},
-		},*/
+		},
 		{ // сработала валидация - логин не должен быть пустым
 			Path:   ApiUserProfile,
 			Query:  "",
@@ -77,8 +77,8 @@ func TestMyApi(t *testing.T) {
 			Result: CR{
 				"error": "login must me not empty",
 			},
-		},
-		/*{ // получили ошибку общего назначения - ваш код сам подставил 500
+		},*/
+		{ // получили ошибку общего назначения - ваш код сам подставил 500
 			Path:   ApiUserProfile,
 			Query:  "login=bad_user",
 			Status: http.StatusInternalServerError,
@@ -86,7 +86,7 @@ func TestMyApi(t *testing.T) {
 				"error": "bad user",
 			},
 		},
-		{ // получили специализированную ошибку - ваш код поставил статус 404 оттуда
+		/*{ // получили специализированную ошибку - ваш код поставил статус 404 оттуда
 			Path:   ApiUserProfile,
 			Query:  "login=not_exist_user",
 			Status: http.StatusNotFound,

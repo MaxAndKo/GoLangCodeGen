@@ -94,7 +94,7 @@ func main() {
 			fmt.Fprintf(res, "\t\t\tconverted, error := convertFor%s%s(params)\n", k, funcData.MethodName)
 			fmt.Fprintf(res, "\t\t\tif error != nil {\n\t\t\t\thttp.Error(w, \"{\\\"error\\\":\\\"\" + error.Error() + \"\\\"}\", http.StatusBadRequest)\n\t\t\t\treturn\n\t\t\t}\n")
 			fmt.Fprintf(res, "\t\t\tres, error := h.%s(nil, converted)\n", funcData.MethodName)
-			fmt.Fprintf(res, "\t\t\tif error != nil {\n\t\t\t\thttp.Error(w, \"\\\"{error\\\":\" + error.Error() + \"}\", http.StatusBadRequest)\n\t\t\t\treturn\n\t\t\t}\n")
+			fmt.Fprintf(res, "\t\t\tif error != nil {\n\t\t\t\thttp.Error(w, \"{\\\"error\\\":\\\"\" + error.Error() + \"\\\"}\", http.StatusInternalServerError)\n\t\t\t\treturn\n\t\t\t}\n")
 			fmt.Fprintf(res, "\t\t\tw.Write(putRes(res))\n")
 		}
 		fmt.Fprintln(res, "\t}")
