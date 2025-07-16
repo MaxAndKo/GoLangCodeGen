@@ -170,7 +170,8 @@ func main() {
 					fmt.Fprintf(res, "\tif %s != \"\"{\n", requiredFieldName)
 				}
 				if isInt {
-					fmt.Fprintf(res, "\t\t%s, err := strconv.Atoi(%s)\n", fieldName, stringFieldName)
+					fmt.Fprintf(res, "\t\tvar err error\n")
+					fmt.Fprintf(res, "\t\t%s, err = strconv.Atoi(%s)\n", fieldName, stringFieldName)
 					fmt.Fprintf(res, "\t\tif err != nil {\n\t\t\treturn %s{}, errors.New(\"%s must be int\")\n\t\t}\n", convertableType.Name, targetName)
 				}
 
