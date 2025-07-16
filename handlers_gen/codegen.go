@@ -170,22 +170,23 @@ func main() {
 					fmt.Fprintf(res, "\tif %s != \"\"{\n", requiredFieldName)
 				}
 				if isInt {
-					fmt.Fprintf(res, "\t\t%s, _ = strconv.Atoi(%s)\n", fieldName, stringFieldName)
+					fmt.Fprintf(res, "\t\t%s, err := strconv.Atoi(%s)\n", fieldName, stringFieldName)
+					fmt.Fprintf(res, "\t\tif err != nil {\n\t\t\treturn %s{}, errors.New(\"%s must be int\")\n\t\t}\n", convertableType.Name, targetName)
 				}
 
 				if args.HasMax {
 					if isInt {
-						fmt.Fprintf(res, "\t\tif %s >= %d{\n\t\t\tpanic(\"\")\n\t\t\t}\n", fieldName, args.Max)
+						fmt.Fprintf(res, "\t\tif %s > %d{\n\t\t\treturn %s{}, errors.New(\"%s must be <= %d\")\n\t\t\t}\n", fieldName, args.Max, convertableType.Name, targetName, args.Max)
 					} else {
-						fmt.Fprintf(res, "\t\tif len(%s) >= %d{\n\t\t\tpanic(\"\")\n\t\t}\n", fieldName, args.Max)
+						fmt.Fprintf(res, "\t\tif len(%s) > %d{\n\t\t\treturn %s{}, errors.New(\"%s len must be <= %d\")\n\t\t}\n", fieldName, args.Max, convertableType.Name, targetName, args.Max)
 					}
 				}
 
 				if args.HasMin {
 					if isInt {
-						fmt.Fprintf(res, "\t\tif %s <= %d{\n\t\t\tpanic(\"\")\n\t\t\t}\n", fieldName, args.Min)
+						fmt.Fprintf(res, "\t\tif %s < %d{\n\t\t\treturn %s{}, errors.New(\"%s must be >= %d\")\n\t\t\t}\n", fieldName, args.Min, convertableType.Name, targetName, args.Min)
 					} else {
-						fmt.Fprintf(res, "\t\tif len(%s) <= %d{\n\t\t\tpanic(\"\")\n\t\t}\n", fieldName, args.Min)
+						fmt.Fprintf(res, "\t\tif len(%s) < %d{\n\t\t\treturn %s{}, errors.New(\"%s len must be >= %d\")\n\t\t}\n", fieldName, args.Min, convertableType.Name, targetName, args.Min)
 					}
 				}
 
@@ -201,7 +202,7 @@ func main() {
 					fmt.Fprintf(res, "\t\t%s = \"%s\"\n", fieldName, args.Enum.Default)
 					fmt.Fprintf(res, "\t} else {\n")
 					fmt.Fprintf(res, "\t\tif !slices.Contains([]string{\"%s\"}, %s){\n", strings.Join(args.Enum.Values, "\",\""), fieldName)
-					fmt.Fprintf(res, "\t\t\tpanic(\"\")\n")
+					fmt.Fprintf(res, "\t\t\treturn %s{}, errors.New(\"%s must be one of [%s]\")\n", convertableType.Name, targetName, strings.Join(args.Enum.Values, ", "))
 					fmt.Fprintf(res, "\t\t}\n")
 					fmt.Fprintf(res, "\t}\n")
 				}

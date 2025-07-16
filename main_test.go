@@ -162,7 +162,7 @@ func TestMyApi(t *testing.T) {
 				"error": "user mr.moderator exist",
 			},
 		},
-		/*{
+		{
 			Path:   ApiUserCreate,
 			Method: http.MethodPost,
 			Query:  "&age=32&status=moderator&full_name=Ivan_Ivanov",
@@ -244,7 +244,7 @@ func TestMyApi(t *testing.T) {
 			Result: CR{
 				"error": "bad user",
 			},
-		},*/
+		},
 	}
 
 	runTests(t, ts, cases)
